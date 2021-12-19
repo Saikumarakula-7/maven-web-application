@@ -1,0 +1,62 @@
+pipeline{
+
+agent any
+
+tools{
+    maven "maven 3.8.4"
+}
+
+options{
+
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '3', daysToKeepStr: '', numToKeepStr: '3'))
+
+    timestamps()
+}
+
+triggers{
+
+//pool scm
+pollSCM('* * * * *')
+
+}
+
+stages{
+    stage('git checkout code'){
+    steps{
+        git branch: 'development', credentialsId: 'Github', url: 'https://github.com/Saikumarakula-7/maven-web-application.git'
+    }
+    }
+
+    stage('build'){
+    steps{
+
+        sh "mvn clean package"
+    }
+    }
+    stage('sonarqube'){
+    steps{
+
+        sh "mvn clean sonar:sonar"
+    }
+
+    }
+    stage('nexus'){
+    steps{
+        sh "mvn clean deploy"
+
+    }
+
+    }
+    stage('deploy to tomcat'){
+    steps{
+
+        sshagent(['2cf20949-86b8-4063-9038-d2ae1291bddd']) {
+        sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@13.127.155.81:/opt/apache-tomcat-9.0.55/webapps"
+}
+    }
+
+
+    }
+
+}
+}
